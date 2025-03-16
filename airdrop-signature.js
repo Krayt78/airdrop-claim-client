@@ -1,8 +1,6 @@
 const { ethers } = require('ethers');
-const { ApiPromise, WsProvider, Keyring } = require('@polkadot/api');
-const { u8aToHex, hexToU8a, stringToU8a, u8aToString } = require('@polkadot/util');
+const { stringToU8a } = require('@polkadot/util');
 const { encodeAddress, decodeAddress } = require('@polkadot/keyring');
-const { blake2AsU8a } = require('@polkadot/util-crypto');
 
 /**
  * Encodes a number as a u64 in little-endian format (SCALE encoding)
@@ -99,12 +97,7 @@ async function generateClaimSignature(ethereumPrivateKey, substrateAddress) {
   // Setup the Ethereum wallet (ethers v6 style)
   const wallet = new ethers.Wallet(ethereumPrivateKey);
   const ethereumAddress = wallet.address;
-  
-  // Connect to Substrate
-  const api = await ApiPromise.create({
-    provider: new WsProvider('wss://rpc.polkadot.io')
-  });
-  
+
   // Find the correct encoding for the substrate address
   let destAccount;
   
@@ -180,7 +173,7 @@ async function generateClaimSignature(ethereumPrivateKey, substrateAddress) {
 }
 
 // Example usage
-async function main() {
+async function test() {
   // Replace with a real Ethereum private key
   const ethereumPrivateKey = '0x9116d6c6a9c830c06af62af6d4101b566e2466d88510b6c11d655545c74790a4';
   
@@ -204,4 +197,5 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+
+module.exports = { generateClaimSignature }; 
