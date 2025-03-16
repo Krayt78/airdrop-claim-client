@@ -143,19 +143,38 @@ async function generateClaimSignature(ethereumPrivateKey, substrateAddress) {
   const messageHash = ethers.keccak256(message);
   console.log(`messageHash: ${ethers.getBytes(messageHash)}`);
   
-  // Use signDigest to sign the hash directly (this matches the Rust pallet)
-  const signature = await wallet.signDigest(messageHash);
-  console.log(`Signature from signDigest: ${signature}`);
+  // In ethers v6, we need to use SigningKey directly
+  const signingKey = new ethers.SigningKey(wallet.privateKey);
   
-  // Convert to the format expected by the pallet
-  const signatureBytes = ethers.getBytes(signature);
-  console.log(`Signature bytes: ${Array.from(signatureBytes)}`);
+  // Sign the hash directly (this is what the Rust pallet does with libsecp256k1)
+  const messageHashBytes = ethers.getBytes(messageHash);
+  const signature = signingKey.sign(messageHashBytes);
+  console.log(`signature: ${signature}`);
+
+  // Create a 65-byte array (matching the [u8; 65] in Rust)
+  const signatureBytes = new Uint8Array(65);
   
-  // Format the signature without '0x' prefix
-  const formattedSignature = signature.slice(2);
+  // Fill with r bytes (first 32 bytes)
+  const rBytes = ethers.getBytes(signature.r);
+  signatureBytes.set(rBytes, 0);
+  
+  // Fill with s bytes (next 32 bytes)
+  const sBytes = ethers.getBytes(signature.s);
+  signatureBytes.set(sBytes, 32);
+  
+  // Set the recovery byte (last byte)
+  // In Rust, recovery_id is 0 or 1, whereas in Ethereum v is usually 27 or 28
+  signatureBytes[64] = signature.v === 27 ? 0 : 1;
+
+  const finalSignature = Array.from(signatureBytes);
+  console.log(`Final signature bytes: ${finalSignature}`);
+  
+  // Convert to hex for transmission
+  const formattedSignature = ethers.hexlify(signatureBytes);
+  console.log(`formattedSignature: ${formattedSignature}`);
   
   return {
-    signature: `0x${formattedSignature}`,
+    signature: `${formattedSignature}`,
     ethereumAddress
   };
 }
